@@ -204,8 +204,12 @@ MavESP8266Vehicle::_readMessage()
                         _last_heartbeat = millis();
                     }
                 } else {
-                    if(_message[_queue_count].msgid == MAVLINK_MSG_ID_HEARTBEAT)
+                    if(_message[_queue_count].msgid == MAVLINK_MSG_ID_HEARTBEAT){
                         _last_heartbeat = millis();
+                        uint8_t fc_mode = mavlink_msg_heartbeat_get_base_mode(&_message[_queue_count]);
+                        uint8_t armed = (fc_mode & MAV_MODE_FLAG_DECODE_POSITION_SAFETY);
+                        DEBUG_LOG("CompId: %u, SystemId: %u, Armed: %s\n", _component_id, _system_id, ((armed == 1)? "true": "false"));
+                    }
                     _checkLinkErrors(&_message[_queue_count]);
                 }
 
