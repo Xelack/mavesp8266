@@ -227,7 +227,7 @@ void catch_interrupts() {
 void setup() {
 #ifdef ESP32
     //downgrade CPU speed to reduce power consumption
-    setCpuFrequencyMhz(160);  
+    // setCpuFrequencyMhz(160);  
 #endif
     delay(1000);
     Parameters.begin();

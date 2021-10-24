@@ -118,7 +118,16 @@ MavESP8266Component::handleMessage(MavESP8266Bridge* sender, mavlink_message_t* 
               }
           }
       }
+//   } else if(message->msgid == MAVLINK_MSG_ID_FLIGHT_INFORMATION){
+//     mavlink_flight_information_t param;
+//     mavlink_msg_flight_information_decode(message, &param);
+  } else if(message->msgid == MAVLINK_MSG_ID_GPS2_RAW){
+    DEBUG_LOG("Sat. count: test\n");
+     mavlink_gps2_raw_t param;
+     mavlink_msg_gps2_raw_decode(message, &param);
+     DEBUG_LOG("Sat. count: %u\n", param.satellites_visible);
   }
+
 
   //-- Couldn't handle the message, pass on
   return false;
