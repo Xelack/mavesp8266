@@ -266,10 +266,8 @@ void setup() {
 
         //-- Wait a minute to connect
         for(int i = 0; i < 120 && WiFi.status() != WL_CONNECTED; i++) {
-            #ifdef ENABLE_DEBUG
-            Serial.print(".");
-            #endif
-            delay(500);
+            DEBUG_LOG(".");
+            delay(50);
         }
         if(WiFi.status() == WL_CONNECTED) {
             localIP = WiFi.localIP();
@@ -329,6 +327,7 @@ void loop() {
     if(!updateStatus.isUpdating()) {
         doPendingAction();
         if (Component.inRawMode()) {
+            DEBUG_LOG("RAW MODE\n");
             GCS.readMessageRaw();
             delay(0);
             Vehicle.readMessageRaw();

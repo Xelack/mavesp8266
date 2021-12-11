@@ -40,109 +40,249 @@
 #include "mavesp8266_parameters.h"
 #include "mavesp8266_vehicle.h"
 
-const char* kHASH_PARAM = "_HASH_CHECK";
+const char *kHASH_PARAM = "_HASH_CHECK";
 
-
-MavESP8266Component::MavESP8266Component() {
-
-
+MavESP8266Component::MavESP8266Component()
+{
 }
 
-bool
-MavESP8266Component::inRawMode() {
-  // switch out of raw mode when not needed anymore
-  if (_in_raw_mode_time > 0 && millis() > _in_raw_mode_time + 5000) {
-    _in_raw_mode = false;
-    _in_raw_mode_time = 0;
-    getWorld()->getLogger()->log("Raw mode disabled\n");
-  }
+bool MavESP8266Component::inRawMode()
+{
+    // switch out of raw mode when not needed anymore
+    if (_in_raw_mode_time > 0 && millis() > _in_raw_mode_time + 5000)
+    {
+        _in_raw_mode = false;
+        _in_raw_mode_time = 0;
+        getWorld()->getLogger()->log("Raw mode disabled\n");
+    }
 
-  return _in_raw_mode;
+    return _in_raw_mode;
 }
-
-bool
-MavESP8266Component::handleMessage(MavESP8266Bridge* sender, mavlink_message_t* message) {
-
-  //
-  //   TODO: These response messages need to be queued up and sent as part of the main loop and not all
-  //   at once from here.
-  //
-  //-----------------------------------------------
-
-  //-- MAVLINK_MSG_ID_PARAM_SET
-  if(message->msgid == MAVLINK_MSG_ID_PARAM_SET) {
-      mavlink_param_set_t param;
-      mavlink_msg_param_set_decode(message, &param);
-      DEBUG_LOG("MAVLINK_MSG_ID_PARAM_SET: %u %s\n", param.target_component, param.param_id);
-      if(param.target_component == MAV_COMP_ID_UDP_BRIDGE) {
-          _handleParamSet(sender, &param);
-          return true;
-      }
-  //-----------------------------------------------
-  //-- MAVLINK_MSG_ID_COMMAND_LONG
-  } else if(message->msgid == MAVLINK_MSG_ID_COMMAND_LONG) {
-      mavlink_command_long_t cmd;
-      mavlink_msg_command_long_decode(message, &cmd);
-      if(cmd.target_component == MAV_COMP_ID_ALL || cmd.target_component == MAV_COMP_ID_UDP_BRIDGE) {
-          _handleCmdLong(sender, &cmd, cmd.target_component);
-          //-- If it was directed to us, eat it and loop
-          if(cmd.target_component == MAV_COMP_ID_UDP_BRIDGE) {
-              return true;
-          }
-      }
-  //-----------------------------------------------
-  //-- MAVLINK_MSG_ID_PARAM_REQUEST_LIST
-  } else if(message->msgid == MAVLINK_MSG_ID_PARAM_REQUEST_LIST) {
-      mavlink_param_request_list_t param;
-      mavlink_msg_param_request_list_decode(message, &param);
-      DEBUG_LOG("MAVLINK_MSG_ID_PARAM_REQUEST_LIST: %u\n", param.target_component);
-      if(param.target_component == MAV_COMP_ID_ALL || param.target_component == MAV_COMP_ID_UDP_BRIDGE) {
-          _handleParamRequestList(sender);
-      }
-  //-----------------------------------------------
-  //-- MAVLINK_MSG_ID_PARAM_REQUEST_READ
-  } else if(message->msgid == MAVLINK_MSG_ID_PARAM_REQUEST_READ) {
-      mavlink_param_request_read_t param;
-      mavlink_msg_param_request_read_decode(message, &param);
-      //-- This component or all components?
-      if(param.target_component == MAV_COMP_ID_ALL || param.target_component == MAV_COMP_ID_UDP_BRIDGE) {
-          //-- If asking for hash, respond and pass through
-          if(strncmp(param.param_id, kHASH_PARAM, MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN) == 0) {
-              _sendParameter(sender, kHASH_PARAM, getWorld()->getParameters()->paramHashCheck(), 0xFFFF);
-          } else {
-              _handleParamRequestRead(sender, &param);
-              //-- If this was addressed to me only eat message
-              if(param.target_component == MAV_COMP_ID_UDP_BRIDGE) {
-                  //-- Eat message (don't send it to FC)
-                  return true;
-              }
-          }
-      }
-//   } else if(message->msgid == MAVLINK_MSG_ID_FLIGHT_INFORMATION){
-//     mavlink_flight_information_t param;
-//     mavlink_msg_flight_information_decode(message, &param);
-  } else if(message->msgid == MAVLINK_MSG_ID_GPS2_RAW){
-    DEBUG_LOG("Sat. count: test\n");
-     mavlink_gps2_raw_t param;
-     mavlink_msg_gps2_raw_decode(message, &param);
-     DEBUG_LOG("Sat. count: %u\n", param.satellites_visible);
-  }
-
-
-  //-- Couldn't handle the message, pass on
-  return false;
+void MavESP8266Component::debugMAVLINK(MavESP8266Bridge *sender, mavlink_message_t *message)
+{   
+    if (message->msgid == MAVLINK_MSG_ID_HEARTBEAT){
+        return;
+    }
+    bool logme = false;
+    bool iscmd = false;
+    if (message->msgid == MAVLINK_MSG_ID_PARAM_SET)
+    {
+        // DEBUG_LOG("MAVLINK_MSG_ID_PARAM_SET\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_COMMAND_INT)
+    {logme = true;
+        DEBUG_LOG("MAVLINK_MSG_ID_COMMAND_INT\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_COMMAND_LONG)
+    {
+        iscmd = true;
+        DEBUG_LOG("MAVLINK_MSG_ID_COMMAND_LONG\n");
+        mavlink_command_long_t cmd;
+        mavlink_msg_command_long_decode(message, &cmd);
+        if (cmd.command == MAV_CMD_DO_DIGICAM_CONTROL)
+        {
+            DEBUG_LOG("MAV_CMD_DO_DIGICAM_CONTROL {\n");
+            logme = true;
+        }
+        else if (cmd.command == MAV_CMD_REQUEST_CAMERA_SETTINGS)
+        {logme = true;
+            DEBUG_LOG("MAV_CMD_REQUEST_CAMERA_SETTINGS {\n");
+        }
+        else if (cmd.command == MAV_CMD_SET_CAMERA_MODE)
+        {logme = true;
+            DEBUG_LOG("MAV_CMD_SET_CAMERA_MODE {\n");
+        }
+        else if (cmd.command == MAV_CMD_REQUEST_CAMERA_CAPTURE_STATUS)
+        {logme = true;
+            DEBUG_LOG("MAV_CMD_REQUEST_CAMERA_CAPTURE_STATUS {\n");
+        }
+        else if (cmd.command == MAV_CMD_IMAGE_START_CAPTURE)
+        {logme = true;
+            DEBUG_LOG("MAV_CMD_IMAGE_START_CAPTURE {\n");
+        }
+        else if (cmd.command == MAV_CMD_REQUEST_STORAGE_INFORMATION)
+        {logme = true;
+            DEBUG_LOG("MAV_CMD_REQUEST_STORAGE_INFORMATION {\n");
+        }
+        else if (cmd.command == MAV_CMD_DO_DIGICAM_CONFIGURE)
+        {logme = true;
+            DEBUG_LOG("MAV_CMD_DO_DIGICAM_CONFIGURE {\n");
+        }
+        else if (cmd.command == MAV_CMD_DO_TRIGGER_CONTROL)
+        {logme = true;
+            DEBUG_LOG("MAV_CMD_DO_TRIGGER_CONTROL {\n");
+        }
+        else if (cmd.command == MAV_CMD_DO_SET_CAM_TRIGG_DIST)
+        {logme = true;
+            DEBUG_LOG("MAV_CMD_DO_SET_CAM_TRIGG_DIST {\n");
+        }
+        else
+        {
+            if((cmd.command != 511) && (cmd.command != 512))
+            {logme = true;
+                DEBUG_LOG("CMDID:%u {\n", cmd.command );
+            }
+        }
+        if(iscmd && logme){
+        DEBUG_LOG("target_system:%u,target_component:%u\np1:%f\np2:%f\np3:%f\np4:%f\np5:%f\np6:%f\np7:%f\n}\n",
+                  cmd.target_system,
+                  cmd.target_component,
+                  cmd.param1,
+                  cmd.param2,
+                  cmd.param3,
+                  cmd.param4,
+                  cmd.param5,
+                  cmd.param6,
+                  cmd.param7);
+        }
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_PARAM_REQUEST_LIST)
+    {
+        //   DEBUG_LOG("MAVLINK_MSG_ID_PARAM_REQUEST_LIST\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_PARAM_REQUEST_READ)
+    {
+        // DEBUG_LOG("MAVLINK_MSG_ID_PARAM_REQUEST_READ\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_FLIGHT_INFORMATION)
+    {
+        //   DEBUG_LOG("MAVLINK_MSG_ID_FLIGHT_INFORMATION\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_GPS2_RAW)
+    {
+        //   DEBUG_LOG("MAVLINK_MSG_ID_GPS2_RAW\n");
+        // DEBUG_LOG("Sat. count: test\n");
+        //  mavlink_gps2_raw_t param;
+        //  mavlink_msg_gps2_raw_decode(message, &param);
+        //  DEBUG_LOG("Sat. count: %u\n", param.satellites_visible);
+    }else if (message->msgid == MAVLINK_MSG_ID_CAMERA_INFORMATION)
+    {logme = true;
+        DEBUG_LOG("MAVLINK_MSG_ID_CAMERA_INFORMATION\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_DIGICAM_CONFIGURE)
+    {logme = true;
+        DEBUG_LOG("MAVLINK_MSG_ID_DIGICAM_CONFIGURE\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_CAMERA_SETTINGS)
+    {logme = true;
+        DEBUG_LOG("MAVLINK_MSG_ID_CAMERA_SETTINGS\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_CAMERA_TRIGGER)
+    {logme = true;
+        DEBUG_LOG("MAVLINK_MSG_ID_CAMERA_TRIGGER\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_CAMERA_FEEDBACK)
+    {logme = true;
+        DEBUG_LOG("MAVLINK_MSG_ID_CAMERA_FEEDBACK\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_CAMERA_STATUS)
+    {logme = true;
+        DEBUG_LOG("MAVLINK_MSG_ID_CAMERA_STATUS\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_RC_CHANNELS_RAW)
+    {
+        // DEBUG_LOG("MAVLINK_MSG_ID_RC_CHANNELS_RAW\n");
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_RC_CHANNELS)
+    {
+        // DEBUG_LOG("MAVLINK_MSG_ID_RC_CHANNELS\n");
+        //     mavlink_rc_channels_t rc_channels;
+        //     mavlink_msg_rc_channels_decode(message, &rc_channels);
+        //     DEBUG_LOG("RC %u\n", rc_channels.chan8_raw);
+    }else{
+        if((message->msgid > 200) && (message->msgid != 241)){
+            logme = true;
+            DEBUG_LOG("Msgid %u\n", message->msgid);
+        }
+    }
+    if (logme){
+        DEBUG_LOG("SYSID: %u - COMPID: %u -", message->sysid, message->compid);
+    }
 }
+bool MavESP8266Component::handleMessage(MavESP8266Bridge *sender, mavlink_message_t *message)
+{
 
-
-
-
+    //
+    //   TODO: These response messages need to be queued up and sent as part of the main loop and not all
+    //   at once from here.
+    //
+    //-----------------------------------------------
+    //-- MAVLINK_MSG_ID_PARAM_SET
+    if (message->msgid == MAVLINK_MSG_ID_PARAM_SET)
+    {
+        mavlink_param_set_t param;
+        mavlink_msg_param_set_decode(message, &param);
+        DEBUG_LOG("MAVLINK_MSG_ID_PARAM_SET: %u %s\n", param.target_component, param.param_id);
+        if (param.target_component == MAV_COMP_ID_UDP_BRIDGE)
+        {
+            _handleParamSet(sender, &param);
+            return true;
+        }
+        //-----------------------------------------------
+        //-- MAVLINK_MSG_ID_COMMAND_LONG
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_COMMAND_LONG)
+    {
+        mavlink_command_long_t cmd;
+        mavlink_msg_command_long_decode(message, &cmd);
+        if (cmd.target_component == MAV_COMP_ID_ALL || cmd.target_component == MAV_COMP_ID_UDP_BRIDGE)
+        {
+            _handleCmdLong(sender, &cmd, cmd.target_component);
+            //-- If it was directed to us, eat it and loop
+            if (cmd.target_component == MAV_COMP_ID_UDP_BRIDGE)
+            {
+                return true;
+            }
+        }
+        //-----------------------------------------------
+        //-- MAVLINK_MSG_ID_PARAM_REQUEST_LIST
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_PARAM_REQUEST_LIST)
+    {
+        mavlink_param_request_list_t param;
+        mavlink_msg_param_request_list_decode(message, &param);
+        // DEBUG_LOG("MAVLINK_MSG_ID_PARAM_REQUEST_LIST: %u\n", param.target_component);
+        if (param.target_component == MAV_COMP_ID_ALL || param.target_component == MAV_COMP_ID_UDP_BRIDGE)
+        {
+            _handleParamRequestList(sender);
+        }
+        //-----------------------------------------------
+        //-- MAVLINK_MSG_ID_PARAM_REQUEST_READ
+    }
+    else if (message->msgid == MAVLINK_MSG_ID_PARAM_REQUEST_READ)
+    {
+        mavlink_param_request_read_t param;
+        mavlink_msg_param_request_read_decode(message, &param);
+        //-- This component or all components?
+        if (param.target_component == MAV_COMP_ID_ALL || param.target_component == MAV_COMP_ID_UDP_BRIDGE)
+        {
+            //-- If asking for hash, respond and pass through
+            if (strncmp(param.param_id, kHASH_PARAM, MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN) == 0)
+            {
+                _sendParameter(sender, kHASH_PARAM, getWorld()->getParameters()->paramHashCheck(), 0xFFFF);
+            }
+            else
+            {
+                _handleParamRequestRead(sender, &param);
+                //-- If this was addressed to me only eat message
+                if (param.target_component == MAV_COMP_ID_UDP_BRIDGE)
+                {
+                    //-- Eat message (don't send it to FC)
+                    return true;
+                }
+            }
+        }
+    }
+    //-- Couldn't handle the message, pass on
+    return false;
+}
 
 //---------------------------------------------------------------------------------
 //-- Send Debug Message
-int
-MavESP8266Component::_sendStatusMessage(MavESP8266Bridge* sender, uint8_t type, const char* text)
+int MavESP8266Component::_sendStatusMessage(MavESP8266Bridge *sender, uint8_t type, const char *text)
 {
-    if(!getWorld()->getParameters()->getDebugEnabled() && type == MAV_SEVERITY_DEBUG) {
+    if (!getWorld()->getParameters()->getDebugEnabled() && type == MAV_SEVERITY_DEBUG)
+    {
         return 0;
     }
     //-- Build message
@@ -153,21 +293,22 @@ MavESP8266Component::_sendStatusMessage(MavESP8266Bridge* sender, uint8_t type, 
         sender->_send_chan,
         &msg,
         type,
-        text
-    );
+        text);
     return sender->sendMessage(&msg);
 }
 
 //---------------------------------------------------------------------------------
 //-- Set parameter
-void
-MavESP8266Component::_handleParamSet(MavESP8266Bridge* sender, mavlink_param_set_t* param)
+void MavESP8266Component::_handleParamSet(MavESP8266Bridge *sender, mavlink_param_set_t *param)
 {
-    for(int i = 0; i < MavESP8266Parameters::ID_COUNT; i++) {
+    for (int i = 0; i < MavESP8266Parameters::ID_COUNT; i++)
+    {
         //-- Find parameter
-        if(strncmp(param->param_id, getWorld()->getParameters()->getAt(i)->id, strlen(getWorld()->getParameters()->getAt(i)->id)) == 0) {
+        if (strncmp(param->param_id, getWorld()->getParameters()->getAt(i)->id, strlen(getWorld()->getParameters()->getAt(i)->id)) == 0)
+        {
             //-- Skip Read Only
-            if(!getWorld()->getParameters()->getAt(i)->readOnly) {
+            if (!getWorld()->getParameters()->getAt(i)->readOnly)
+            {
                 //-- Set new value
                 memcpy(getWorld()->getParameters()->getAt(i)->value, &param->param_value, getWorld()->getParameters()->getAt(i)->length);
             }
@@ -180,10 +321,10 @@ MavESP8266Component::_handleParamSet(MavESP8266Bridge* sender, mavlink_param_set
 
 //---------------------------------------------------------------------------------
 //-- Handle Parameter Request List
-void
-MavESP8266Component::_handleParamRequestList(MavESP8266Bridge* sender)
+void MavESP8266Component::_handleParamRequestList(MavESP8266Bridge *sender)
 {
-    for(int i = 0; i < MavESP8266Parameters::ID_COUNT; i++) {
+    for (int i = 0; i < MavESP8266Parameters::ID_COUNT; i++)
+    {
         _sendParameter(sender, getWorld()->getParameters()->getAt(i)->index);
         delay(0);
     }
@@ -191,12 +332,13 @@ MavESP8266Component::_handleParamRequestList(MavESP8266Bridge* sender)
 
 //---------------------------------------------------------------------------------
 //-- Handle Parameter Request Read
-void
-MavESP8266Component::_handleParamRequestRead(MavESP8266Bridge* sender, mavlink_param_request_read_t* param)
+void MavESP8266Component::_handleParamRequestRead(MavESP8266Bridge *sender, mavlink_param_request_read_t *param)
 {
-    for(int i = 0; i < MavESP8266Parameters::ID_COUNT; i++) {
+    for (int i = 0; i < MavESP8266Parameters::ID_COUNT; i++)
+    {
         //-- Find parameter
-        if(param->param_index == getWorld()->getParameters()->getAt(i)->index || strncmp(param->param_id, getWorld()->getParameters()->getAt(i)->id, strlen(getWorld()->getParameters()->getAt(i)->id)) == 0) {
+        if (param->param_index == getWorld()->getParameters()->getAt(i)->index || strncmp(param->param_id, getWorld()->getParameters()->getAt(i)->id, strlen(getWorld()->getParameters()->getAt(i)->id)) == 0)
+        {
             _sendParameter(sender, getWorld()->getParameters()->getAt(i)->index);
             return;
         }
@@ -205,8 +347,7 @@ MavESP8266Component::_handleParamRequestRead(MavESP8266Bridge* sender, mavlink_p
 
 //---------------------------------------------------------------------------------
 //-- Send Parameter (Index Based)
-void
-MavESP8266Component::_sendParameter(MavESP8266Bridge* sender, uint16_t index)
+void MavESP8266Component::_sendParameter(MavESP8266Bridge *sender, uint16_t index)
 {
     //-- Build message
     mavlink_param_value_t msg;
@@ -223,16 +364,14 @@ MavESP8266Component::_sendParameter(MavESP8266Bridge* sender, uint16_t index)
         MAV_COMP_ID_UDP_BRIDGE,
         sender->_send_chan,
         &mmsg,
-        &msg
-    );
+        &msg);
 
     sender->sendMessage(&mmsg);
 }
 
 //---------------------------------------------------------------------------------
 //-- Send Parameter (Raw)
-void
-MavESP8266Component::_sendParameter(MavESP8266Bridge* sender, const char* id, uint32_t value, uint16_t index)
+void MavESP8266Component::_sendParameter(MavESP8266Bridge *sender, const char *id, uint32_t value, uint16_t index)
 {
     //-- Build message
     mavlink_param_value_t msg;
@@ -247,57 +386,58 @@ MavESP8266Component::_sendParameter(MavESP8266Bridge* sender, const char* id, ui
         MAV_COMP_ID_UDP_BRIDGE,
         sender->_send_chan,
         &mmsg,
-        &msg
-    );
+        &msg);
     sender->sendMessage(&mmsg);
 }
 
-
-
-
-
-
-
-
 //---------------------------------------------------------------------------------
 //-- Handle Commands
-void
-MavESP8266Component::_handleCmdLong(MavESP8266Bridge* sender, mavlink_command_long_t* cmd, uint8_t compID)
+void MavESP8266Component::_handleCmdLong(MavESP8266Bridge *sender, mavlink_command_long_t *cmd, uint8_t compID)
 {
     bool reboot = false;
     uint8_t result = MAV_RESULT_UNSUPPORTED;
-    if(cmd->command == MAV_CMD_PREFLIGHT_STORAGE) {
+    if (cmd->command == MAV_CMD_PREFLIGHT_STORAGE)
+    {
         //-- Read from EEPROM
-        if((uint8_t)cmd->param1 == 0) {
+        if ((uint8_t)cmd->param1 == 0)
+        {
             result = MAV_RESULT_ACCEPTED;
             getWorld()->getParameters()->loadAllFromEeprom();
-        //-- Write to EEPROM
-        } else if((uint8_t)cmd->param1 == 1) {
+            //-- Write to EEPROM
+        }
+        else if ((uint8_t)cmd->param1 == 1)
+        {
             result = MAV_RESULT_ACCEPTED;
             getWorld()->getParameters()->saveAllToEeprom();
             delay(0);
-        //-- Restore defaults
-        } else if((uint8_t)cmd->param1 == 2) {
+            //-- Restore defaults
+        }
+        else if ((uint8_t)cmd->param1 == 2)
+        {
             result = MAV_RESULT_ACCEPTED;
             getWorld()->getParameters()->resetToDefaults();
         }
-    } else if(cmd->command == MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN) {
+    }
+    else if (cmd->command == MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN)
+    {
         //-- Reset "Companion Computer"
-        if(((compID == MAV_COMP_ID_UDP_BRIDGE) || (compID == MAV_COMP_ID_ALL)) 
-            && (uint8_t)cmd->param2 == 1) {
+        if (((compID == MAV_COMP_ID_UDP_BRIDGE) || (compID == MAV_COMP_ID_ALL)) && (uint8_t)cmd->param2 == 1)
+        {
             result = MAV_RESULT_ACCEPTED;
             reboot = true;
         }
 
         // recognize FC reboot command and switch to raw mode for bootloader protocol to work
-        if(compID == MAV_COMP_ID_ALL && (uint8_t)cmd->param1 > 0) {
-          getWorld()->getLogger()->log("Raw mode enabled (cmd %d %d)\n", cmd->command, compID);
-          _in_raw_mode = true;
-          _in_raw_mode_time = 0;
+        if (compID == MAV_COMP_ID_ALL && (uint8_t)cmd->param1 > 0)
+        {
+            getWorld()->getLogger()->log("Raw mode enabled (cmd %d %d)\n", cmd->command, compID);
+            _in_raw_mode = true;
+            _in_raw_mode_time = 0;
         }
     }
     //-- Response
-    if(compID == MAV_COMP_ID_UDP_BRIDGE) {
+    if (compID == MAV_COMP_ID_UDP_BRIDGE)
+    {
         mavlink_message_t msg;
         mavlink_msg_command_ack_pack_chan(
             getWorld()->getVehicle()->systemID(),
@@ -307,29 +447,29 @@ MavESP8266Component::_handleCmdLong(MavESP8266Bridge* sender, mavlink_command_lo
             &msg,
             cmd->command,
             result,
-            0,0,0,0
-        );
+            0, 0, 0, 0);
         sender->sendMessage(&msg);
     }
-    if(reboot) {
+    if (reboot)
+    {
         _wifiReboot(sender);
     }
 }
 
 //---------------------------------------------------------------------------------
 //-- Reboot
-void
-MavESP8266Component::_wifiReboot(MavESP8266Bridge* sender)
+void MavESP8266Component::_wifiReboot(MavESP8266Bridge *sender)
 {
     _sendStatusMessage(sender, MAV_SEVERITY_NOTICE, "Rebooting WiFi Bridge.");
     delay(100);
-    getWorld()->getParameters()->saveAllToEeprom(); //backup all changes done in parameters before reboot
+    getWorld()->getParameters()->saveAllToEeprom(); // backup all changes done in parameters before reboot
     delay(100);
     rebootDevice();
 }
 //---------------------------------------------------------------------------------
 //-- Send notice msg to ground station
-void MavESP8266Component::rebootDevice(){
+void MavESP8266Component::rebootDevice()
+{
     DEBUG_LOG("Reboot pending.\n");
     uint8_t state = LED_OFF;
     for (int s = 5; s >= 0; s--)
@@ -348,10 +488,7 @@ void MavESP8266Component::rebootDevice(){
 
 //---------------------------------------------------------------------------------
 //-- Send notice msg to ground station
-int
-MavESP8266Component::sendMsgToGCS(const char* text)
+int MavESP8266Component::sendMsgToGCS(const char *text)
 {
-    return _sendStatusMessage((MavESP8266Bridge*) getWorld()->getGCS(), MAV_SEVERITY_NOTICE, text);
+    return _sendStatusMessage((MavESP8266Bridge *)getWorld()->getGCS(), MAV_SEVERITY_NOTICE, text);
 }
-
-

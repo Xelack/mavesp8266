@@ -53,6 +53,7 @@ public:
     bool    isConnected             ();
 protected:
     void    _sendRadioStatus        ();
+    void    _sendCameraStatus       ();
 
 private:
     bool    _readMessage            ();

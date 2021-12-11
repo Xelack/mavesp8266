@@ -59,6 +59,7 @@ public:
 
 protected:
     void    _sendRadioStatus();
+    void    _sendCameraStatus();
 
 private:
     bool    _readMessage    ();

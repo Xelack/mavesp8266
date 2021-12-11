@@ -79,6 +79,7 @@ MavESP8266GCS::readMessage()
     if(_heard_from && (millis() - _last_status_time > 1000)) {
         delay(0);
         _sendRadioStatus();
+        _sendCameraStatus();
         _last_status_time = millis();
     }
 }
@@ -107,6 +108,9 @@ MavESP8266GCS::_readMessage()
                                                         &_mav_status);
                 if(uMsgReceived != MAVLINK_FRAMING_INCOMPLETE) {
                     bMsgReceived = true;
+#ifdef ENABLE_MAVLINK_DEBUG
+                    getWorld()->getComponent()->debugMAVLINK(this, &_message);
+#endif
                     //-- We no longer need to broadcast
                     _status.packets_received++;
                     if(_ip[3] == 255) {
@@ -303,7 +307,31 @@ MavESP8266GCS::_sendRadioStatus()
     _sendSingleUdpMessage(&msg);
     _status.radio_status_sent++;
 }
-
+//---------------------------------------------------------------------------------
+//-- Send Radio Status
+void
+MavESP8266GCS::_sendCameraStatus()
+{
+    //-- Build message
+   mavlink_message_t msg {};
+    mavlink_msg_camera_status_pack_chan(
+        _forwardTo->systemID(), // system_id – ID of this system
+        MAV_COMP_ID_CAMERA, // component_id – ID of this component (e.g. 200 for IMU)
+        _forwardTo->_recv_chan, // chan – The MAVLink channel this message will be sent over
+        &msg, // msg – The MAVLink message to compress the data into
+        0, // time_usec – Image timestamp (microseconds since UNIX epoch, according to camera clock)
+        0, // target_system – System ID
+        1, // cam_idx – Camera ID
+        12, // img_idx – Image index
+        (uint8_t) CAMERA_STATUS_TYPE_HEARTBEAT & CAMERA_STATUS_TYPE_LOWBATT, // event_id – See CAMERA_STATUS_TYPES enum for definition of the bitmask
+        6, // p1 – Parameter 1 (meaning depends on event, see CAMERA_STATUS_TYPES enum)
+        0, // p2 – Parameter 2 (meaning depends on event, see CAMERA_STATUS_TYPES enum)
+        0, // p3 – Parameter 3 (meaning depends on event, see CAMERA_STATUS_TYPES enum)
+        0  // p4 – Parameter 4 (meaning depends on event, see CAMERA_STATUS_TYPES enum)
+    );
+    _sendSingleUdpMessage(&msg);
+    _status.radio_status_sent++;
+}
 //---------------------------------------------------------------------------------
 //-- Send UDP Single Message
 void

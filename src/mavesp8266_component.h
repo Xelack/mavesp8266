@@ -46,6 +46,7 @@ public:
 
     //- Returns true if the component consumed the message
     bool handleMessage        (MavESP8266Bridge* sender, mavlink_message_t* message);
+    void debugMAVLINK         (MavESP8266Bridge* sender, mavlink_message_t* message);
     bool inRawMode            ();
     void resetRawMode         () { _in_raw_mode_time = millis(); }
     int  sendMsgToGCS         (const char* text);

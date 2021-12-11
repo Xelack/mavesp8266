@@ -112,6 +112,7 @@ MavESP8266Vehicle::readMessage()
     if(_heard_from && (millis() - _last_status_time > 1000)) {
         delay(0);
         _sendRadioStatus();
+        _sendCameraStatus();
         _last_status_time = millis();
     }
 }
@@ -152,6 +153,7 @@ MavESP8266Vehicle::sendMessage(mavlink_message_t* message) {
     char buf[300];
     unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buf, message);
     // Send it
+    
     Serial.write((uint8_t*)(void*)buf, len);
     _status.packets_sent++;
     return 1;
@@ -193,6 +195,9 @@ MavESP8266Vehicle::_readMessage()
                                                     &_mav_status);
             if(uMsgReceived != MAVLINK_FRAMING_INCOMPLETE) {
                 bMsgReceived = true;
+#ifdef ENABLE_MAVLINK_DEBUG
+                    getWorld()->getComponent()->debugMAVLINK(this, &_message[_queue_count]);
+#endif
                 _status.packets_received++;
                 //-- Is this the first packet we got?
                 if(!_heard_from) {
@@ -206,9 +211,9 @@ MavESP8266Vehicle::_readMessage()
                 } else {
                     if(_message[_queue_count].msgid == MAVLINK_MSG_ID_HEARTBEAT){
                         _last_heartbeat = millis();
-                        uint8_t fc_mode = mavlink_msg_heartbeat_get_base_mode(&_message[_queue_count]);
-                        uint8_t armed = (fc_mode & MAV_MODE_FLAG_DECODE_POSITION_SAFETY);
-                        DEBUG_LOG("CompId: %u, SystemId: %u, Armed: %s\n", _component_id, _system_id, ((armed == 1)? "true": "false"));
+                        // uint8_t fc_mode = mavlink_msg_heartbeat_get_base_mode(&_message[_queue_count]);
+                        // uint8_t armed = (fc_mode & MAV_MODE_FLAG_DECODE_POSITION_SAFETY);
+                        // DEBUG_LOG("CompId: %u, SystemId: %u, Armed: %s\n", _component_id, _system_id, ((armed == 1)? "true": "false"));
                     }
                     _checkLinkErrors(&_message[_queue_count]);
                 }
@@ -265,4 +270,29 @@ MavESP8266Vehicle::_sendRadioStatus()
     );
     sendMessage(&msg);
     _status.radio_status_sent++;
+}
+
+//---------------------------------------------------------------------------------
+//-- Send Radio Status
+void
+MavESP8266Vehicle::_sendCameraStatus()
+{
+//     //-- Build message
+    mavlink_message_t msg {};
+    mavlink_msg_camera_status_pack_chan(
+        _forwardTo->systemID(), // system_id – ID of this system
+        MAV_COMP_ID_CAMERA, // component_id – ID of this component (e.g. 200 for IMU)
+        _send_chan, // chan – The MAVLink channel this message will be sent over
+        &msg, // msg – The MAVLink message to compress the data into
+        0, // time_usec – Image timestamp (microseconds since UNIX epoch, according to camera clock)
+        0, // target_system – System ID
+        1, // cam_idx – Camera ID
+        20, // img_idx – Image index
+        (uint8_t) CAMERA_STATUS_TYPE_HEARTBEAT & CAMERA_STATUS_TYPE_LOWBATT, // event_id – See CAMERA_STATUS_TYPES enum for definition of the bitmask
+        5, // p1 – Parameter 1 (meaning depends on event, see CAMERA_STATUS_TYPES enum)
+        0, // p2 – Parameter 2 (meaning depends on event, see CAMERA_STATUS_TYPES enum)
+        0, // p3 – Parameter 3 (meaning depends on event, see CAMERA_STATUS_TYPES enum)
+        0  // p4 – Parameter 4 (meaning depends on event, see CAMERA_STATUS_TYPES enum)
+    );
+    sendMessage(&msg);
 }
