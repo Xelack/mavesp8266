@@ -1,3 +1,6 @@
 [submodule "lib/mavlink"]
 	path = lib/mavlink
 	url = https://github.com/mavlink/c_library_v2.git
+[submodule "lib/tinyxml2"]
+	path = lib/tinyxml2
+	url = https://github.com/leethomason/tinyxml2.git

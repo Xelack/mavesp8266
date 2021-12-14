@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2015, 2016 Gus Grubba. All rights reserved.
+ * Copyright (c) 2021, 2022 Alexandre PRIETO (Xelack). All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,50 +29,26 @@
  ****************************************************************************/
 
 /**
- * @file mavesp8266_component.h
+ * @file pcomponent.h
  * ESP8266 Wifi AP, MavLink UART/UDP Bridge
  *
- * @author Gus Grubba <mavlink@grubba.com>
+ * @author Alexandre PRIETO (Xelack)
  */
 
-#ifndef MAVESP8266_COMPONENT_H
-#define MAVESP8266_COMPONENT_H
+#ifndef PCOMPONENT_H
+#define PCOMPONENT_H
 
 #include "mavesp8266.h"
-#include "PComponent.h"
 
-#define MAX_PERIPHERALS 2
+#define CAMERA_COMPONENT_NAME "CAMERA"
 
-class MavESP8266Component {
+class PComponent {
 public:
-    MavESP8266Component();
 
     //- Returns true if the component consumed the message
-    bool handleMessage          (MavESP8266Bridge* sender, mavlink_message_t* message);
-    bool inRawMode              ();
-    void resetRawMode           () { _in_raw_mode_time = millis(); }
-    int  sendMsgToGCS           (const char* text);
-    int  addPeripheral          (PComponent * device);
-    PComponent * getPeripheral  (int index);
-    PComponent * getPeripheral  (const char * name);
-    void rebootDevice           ();
-
+    virtual bool handleMessage          (MavESP8266Bridge* sender, mavlink_message_t* message) = 0;
+    virtual const char * getName();
 private:
-    int _periph_count = 0;
-    PComponent * _Peripherals[MAX_PERIPHERALS];
-    int     _sendStatusMessage      (MavESP8266Bridge* sender, uint8_t type, const char* text);
-    void    _handleParamSet         (MavESP8266Bridge* sender, mavlink_param_set_t* param);
-    void    _handleParamRequestList (MavESP8266Bridge* sender);
-    void    _handleParamRequestRead (MavESP8266Bridge* sender, mavlink_param_request_read_t* param);
-    void    _sendParameter          (MavESP8266Bridge* sender, uint16_t index);
-    void    _sendParameter          (MavESP8266Bridge* sender, const char* id, uint32_t value, uint16_t index);
-
-    void    _handleCmdLong          (MavESP8266Bridge* sender, mavlink_command_long_t* cmd, uint8_t compID);
-
-    void    _wifiReboot             (MavESP8266Bridge* sender);
-
-    bool            _in_raw_mode;
-    unsigned long   _in_raw_mode_time;
 };
 
 #endif

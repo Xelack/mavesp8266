@@ -42,6 +42,9 @@
 #include "mavesp8266_vehicle.h"
 #include "mavesp8266_httpd.h"
 #include "mavesp8266_component.h"
+#include "NovatekWiFiCam.h"
+#include "CameraComponent.h"
+#include "Camera.h"
 #ifdef ESP32
     #include <ESPmDNS.h>
 #else
@@ -90,6 +93,11 @@ MavESP8266Vehicle       Vehicle;
 MavESP8266Httpd         updateServer;
 MavESP8266UpdateImp     updateStatus;
 MavESP8266Log           Logger;
+
+NovatekWiFiCam          GIT2PCam;
+CameraComponent         CameraPeripheral((Camera*) &GIT2PCam);
+
+// Component.addPeripheral(&Camera);
 
 //---------------------------------------------------------------------------------
 //-- Accessors
@@ -226,6 +234,8 @@ void catch_interrupts() {
 //-- Set things up
 void setup() {
 #ifdef ESP32
+    //add periphrals
+    getWorld()->getComponent()->addPeripheral(&CameraPeripheral);
     //downgrade CPU speed to reduce power consumption
     setCpuFrequencyMhz(160);  
 #endif
