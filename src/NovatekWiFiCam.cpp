@@ -141,6 +141,7 @@ int NovatekWiFiCam::startRec()
   if(httpResponseCode >= 0){
     _recording = true;
   }
+  return httpResponseCode;
 }
 
 /**
@@ -156,6 +157,7 @@ int NovatekWiFiCam::stopRec()
   if(httpResponseCode >= 0){
     _recording = false;
   }
+  return httpResponseCode;
 }
 
 /**
