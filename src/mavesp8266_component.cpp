@@ -133,7 +133,6 @@ bool MavESP8266Component::handleMessage(MavESP8266Bridge *sender, mavlink_messag
     {
         mavlink_param_request_list_t param;
         mavlink_msg_param_request_list_decode(message, &param);
-        DEBUG_LOG("MAVLINK_MSG_ID_PARAM_REQUEST_LIST: %u\n", param.target_component);
         if (param.target_component == MAV_COMP_ID_ALL || param.target_component == MAV_COMP_ID_UDP_BRIDGE)
         {
             _handleParamRequestList(sender);

@@ -43,6 +43,8 @@
 
 const char* kDEFAULT_SSID       = "MAVESPX2";
 const char* kDEFAULT_PASSWORD   = "mavespx2";
+const char* kDEFAULT_SSIDSTA    = "DRONECAM";
+const char* kDEFAULT_PWDSTA     = "12345678";
 
 //-- Reserved space for EEPROM persistence. A change in this will cause all values to reset to defaults.
 #define EEPROM_SPACE            32 * sizeof(uint32_t)
@@ -169,8 +171,8 @@ MavESP8266Parameters::resetToDefaults()
     _wifi_subnetsta    = 0;
     strncpy(_wifi_ssid,         kDEFAULT_SSID,      sizeof(_wifi_ssid));
     strncpy(_wifi_password,     kDEFAULT_PASSWORD,  sizeof(_wifi_password));
-    strncpy(_wifi_ssidsta,      kDEFAULT_SSID,      sizeof(_wifi_ssidsta));
-    strncpy(_wifi_passwordsta,  kDEFAULT_PASSWORD,  sizeof(_wifi_passwordsta));
+    strncpy(_wifi_ssidsta,      kDEFAULT_SSIDSTA,   sizeof(_wifi_ssidsta));
+    strncpy(_wifi_passwordsta,  kDEFAULT_PWDSTA,    sizeof(_wifi_passwordsta));
     _flash_left = ESP.getFreeSketchSpace();
 }
 

@@ -39,16 +39,15 @@
 #define PCOMPONENT_H
 
 #include "mavesp8266.h"
-
 #define CAMERA_COMPONENT_NAME "CAMERA"
 
 class PComponent {
 public:
-
-    //- Returns true if the component consumed the message
     virtual bool handleMessage          (MavESP8266Bridge* sender, mavlink_message_t* message) = 0;
+    virtual bool begin                  () = 0;
     virtual const char * getName();
-private:
+protected:
+    
 };
 
 #endif

@@ -44,13 +44,14 @@ NovatekWiFiCam::NovatekWiFiCam()
 {
 }
 
-int NovatekWiFiCam::begin(const char *baseUrl)
+bool NovatekWiFiCam::begin()
 {
-  DEBUG_LOG("begin WiFiCam...\n");
   _idle = true;
-  int httpResponseCode = setMode(CAMERA_MODE_IMAGE);
+  _recording = false;
+  _Mode = CAPTURE_MODE::MODE_ENUM_END;
+  int httpResponseCode = setMode(CAPTURE_MODE::IMAGE);
   _ready = (httpResponseCode > 0);
-  return httpResponseCode;
+  return _ready;
 }
 
 /**
@@ -61,7 +62,6 @@ int NovatekWiFiCam::begin(const char *baseUrl)
  */
 bool NovatekWiFiCam::isReady()
 {
-  DEBUG_LOG("isReady\n");
   return _ready & _idle;
 }
 
@@ -70,9 +70,8 @@ bool NovatekWiFiCam::isReady()
  *
  * @return const char*
  */
-CAMERA_MODE NovatekWiFiCam::getMode()
+CAPTURE_MODE NovatekWiFiCam::getMode()
 {
-  DEBUG_LOG("getMode\n");
   return _Mode;
 }
 
@@ -82,18 +81,19 @@ CAMERA_MODE NovatekWiFiCam::getMode()
  * @param Mode
  * @return int
  */
-int NovatekWiFiCam::setMode(CAMERA_MODE Mode)
+int NovatekWiFiCam::setMode(CAPTURE_MODE Mode)
 {
-  DEBUG_LOG("setMode\n");
   if (getMode() == Mode)
   {            // Check Current Mode with Mode requested
     return -1; // do nothing if is already set
   }
-  int httpResponseCode = 0;
-  _buildUrl(WIFIAPP_CMD_MODECHANGE, (Mode == CAMERA_MODE_IMAGE)? "0": "1");
+  if (_recording){ //recording in progress, stop 
+    if (stopRec() < 0){ return -2;}
+  }
+  _buildUrl(WIFIAPP_CMD_MODECHANGE, ((Mode == CAPTURE_MODE::IMAGE)? "0": "1"));
   // Send HTTP GET request
-  httpResponseCode = _httpGet();
-  if (httpResponseCode > 0)
+  int httpResponseCode = _httpGet();
+  if (httpResponseCode >= 0)
   {
     _Mode = Mode;
   }
@@ -107,7 +107,6 @@ int NovatekWiFiCam::setMode(CAMERA_MODE Mode)
  */
 int NovatekWiFiCam::takePicture(char * filename)
 {
-  DEBUG_LOG("takePicture\n");
   _buildUrl(WIFIAPP_CMD_CAPTURE, "");
   // Send HTTP GET request
   int statusRequest = _httpGet();
@@ -122,7 +121,13 @@ int NovatekWiFiCam::takePicture(char * filename)
   }
   return statusRequest;
 }
-
+int NovatekWiFiCam::takePicture()
+{
+  DEBUG_LOG("takePicture\n");
+  _buildUrl(WIFIAPP_CMD_CAPTURE, "");
+  // Send HTTP GET request
+  return _httpGet();
+}
 /**
  * @brief
  *
@@ -130,10 +135,12 @@ int NovatekWiFiCam::takePicture(char * filename)
  */
 int NovatekWiFiCam::startRec()
 {
-  DEBUG_LOG("StartRec\n");
   _buildUrl(WIFIAPP_CMD_RECORD, START);
   // Send HTTP GET request
-  return _httpGet();
+  int httpResponseCode = _httpGet();
+  if(httpResponseCode >= 0){
+    _recording = true;
+  }
 }
 
 /**
@@ -143,12 +150,23 @@ int NovatekWiFiCam::startRec()
  */
 int NovatekWiFiCam::stopRec()
 {
-  DEBUG_LOG("StopRec\n");
   _buildUrl(WIFIAPP_CMD_RECORD, STOP);
   // Send HTTP GET request
-  return _httpGet();
+  int httpResponseCode = _httpGet();
+  if(httpResponseCode >= 0){
+    _recording = false;
+  }
 }
 
+/**
+ * @brief 
+ * 
+ * @return true 
+ * @return false 
+ */
+bool NovatekWiFiCam::isRecording(){
+  return _recording;
+}
 /**
  * @brief
  *
@@ -166,7 +184,6 @@ void NovatekWiFiCam::_buildUrl(const char *Command, const char *Parameter)
     _url += PAR;
     _url += Parameter;
   }
-  DEBUG_LOG("\nBuild url: %s\n", _url.c_str());
 }
 
 /**
@@ -179,10 +196,8 @@ int NovatekWiFiCam::_httpGet()
   if (!_idle)
   {
     // Wait a few seconds
-    DEBUG_LOG("Camera busy..waiting");
     for (int i = 0; i < 120 && !_idle; i++)
     {
-      DEBUG_LOG(".");
       delay(100);
     }
     if (!_idle)
@@ -190,26 +205,20 @@ int NovatekWiFiCam::_httpGet()
   }
   _idle = false;
   int httpResponseCode = -1;
-  DEBUG_LOG("\nHttp Request: %s\n", _url.c_str());
   _http.begin(_url.c_str());
   httpResponseCode = _http.GET();
   _response = _http.getString();
   if (httpResponseCode > 0)
   {
-    DEBUG_LOG("Success, Response: \n%s\n", _response.c_str());
     xmlDocument.Clear();
     if (xmlDocument.Parse(_response.c_str()) == XML_SUCCESS)
     {
       XMLElement *pElement = _parseResponse("Function", "Status");
       if (pElement != nullptr)
       {
-        DEBUG_LOG("Status : %d \n", pElement->QueryIntText(&httpResponseCode));
+        pElement->QueryIntText(&httpResponseCode);
       }
     }
-  }
-  else
-  {
-    DEBUG_LOG("Error, Response: \n%s\n", _response.c_str());
   }
   // Free resources
   _http.end();
@@ -226,20 +235,17 @@ XMLElement *NovatekWiFiCam::_parseResponse(const char *searchForParentElement,
   {
     if (strcmp(searchForParentElement, pRoot->Value()) == 0)
     {
-      DEBUG_LOG("Parent: %s \n", pRoot->Value());
       if (strlen(searchForChildElement) > 0)
       {
         XMLElement *pElement = pRoot->FirstChildElement(searchForChildElement);
         if (pElement != nullptr)
         {
-          DEBUG_LOG("Child: %s \n", pElement->Value());
           if (strlen(searchForSubElement) > 0)
           {
             pElement = pElement->FirstChildElement(searchForSubElement);
           }
           if (pElement != nullptr)
           {
-            DEBUG_LOG("Last Child: %s \n", pElement->Value());
             return pElement;
           }
         }

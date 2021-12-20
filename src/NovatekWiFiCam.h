@@ -73,13 +73,14 @@ using namespace tinyxml2;
 class NovatekWiFiCam : public Camera {
 public:
     NovatekWiFiCam          ();
-    int     begin           (const char * baseUrl);
+    bool    begin           ();
     int     takePicture     (char * filename);
+    int     takePicture     ();
     int     startRec        ();
     int     stopRec         ();
-    // int     setMode         (const char* Mode);
-    int     setMode         (CAMERA_MODE Mode);
-    CAMERA_MODE getMode     ();
+    bool    isRecording     ();
+    int     setMode         (CAPTURE_MODE Mode);
+    CAPTURE_MODE getMode     ();
     bool  isReady           ();
     
 
@@ -91,10 +92,11 @@ private:
                                 const char * searchForSubElement = "");
     bool                _ready;
     bool                _idle;
+    bool                _recording;
     String              _url;
     String              _response;
     HTTPClient          _http;
-    CAMERA_MODE       _Mode;
+    CAPTURE_MODE       _Mode;
     XMLDocument       xmlDocument;     
 };
 

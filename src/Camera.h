@@ -38,27 +38,30 @@
 #define CAMERA_H
 
 class Camera;
-#ifndef HAVE_ENUM_CAMERA_MODE
-#define HAVE_ENUM_CAMERA_MODE
-typedef enum CAMERA_MODE
+#ifndef HAVE_ENUM_CAPTURE_MODE
+#define HAVE_ENUM_CAPTURE_MODE
+typedef enum CAPTURE_MODE
 {
-   CAMERA_MODE_IMAGE=0, /* Camera is in image/photo capture mode. | */
-   CAMERA_MODE_VIDEO=1, /* Camera is in video capture mode. | */
-   CAMERA_MODE_IMAGE_SURVEY=2, /* Camera is in image survey capture mode. It allows for camera controller to do specific settings for surveys. | */
-   CAMERA_MODE_ENUM_END=3, /*  | */
-} CAMERA_MODE;
+   IMAGE=0, /* Camera is in image/photo capture mode. | */
+   VIDEO=1, /* Camera is in video capture mode. | */
+   IMAGE_SURVEY=2, /* Camera is in image survey capture mode. It allows for camera controller to do specific settings for surveys. | */
+   MODE_ENUM_END=3, /*  | */
+} CAPTURE_MODE;
 #endif
 
 //---------------------------------------------------------------------------------
 //-- Base Camera
 class Camera {
 public:
+    virtual bool    begin           () = 0;
     virtual int     takePicture     (char * filename) = 0;
+    virtual int     takePicture     () = 0;
     virtual int     startRec        () = 0;
     virtual int     stopRec         () = 0;
-    virtual int     setMode         (CAMERA_MODE Mode) = 0;
-    virtual CAMERA_MODE    getMode  () = 0;
-    virtual bool     isReady        () = 0;
+    virtual int     setMode         (CAPTURE_MODE Mode) = 0;
+    virtual CAPTURE_MODE    getMode  () = 0;
+    virtual bool    isReady         () = 0;
+    virtual bool    isRecording     () = 0;
 };
 
 #endif

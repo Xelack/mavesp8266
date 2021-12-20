@@ -38,20 +38,23 @@
 #ifndef CAMERACOMPONENT_H
 #define CAMERACOMPONENT_H
 
+#include <ardupilotmega/mavlink.h>
 
 #include "PComponent.h"
 #include "Camera.h"
 
 class CameraComponent : public PComponent {
-public:
-    CameraComponent(Camera * CameraDevice);
+    public:
+        CameraComponent(Camera * CameraDevice);
 
-    //- Returns true if the component consumed the message
-    bool handleMessage          (MavESP8266Bridge* sender, mavlink_message_t* message);
-    bool send_feedback          ();
-    const char * getName();
-private:
-    Camera * _Camera;
+        //- Returns true if the component consumed the message
+        bool handleMessage          (MavESP8266Bridge* sender, mavlink_message_t* message);
+        bool begin                  ();
+        bool send_feedback          ();
+        const char * getName();
+        
+    private:
+        Camera * _Camera;
 };
 
 
