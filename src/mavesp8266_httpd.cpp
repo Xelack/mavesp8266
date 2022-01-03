@@ -198,9 +198,6 @@ void handle_upload()
             {
                 DEBUG_LOG("MD5 check passsed, update success!\n");
                 bReboot = true;
-#ifdef DEBUG_SERIAL
-                DEBUG_SERIAL.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
-#endif
             }
             else
             {
@@ -256,29 +253,17 @@ void handle_upload_status() {
     fileUploadStatus = upload.status;
     if(upload.status == UPLOAD_FILE_START) {
         SET_STATUS_LED(LED_ON);
-        #ifdef DEBUG_SERIAL
-            DEBUG_SERIAL.setDebugOutput(true);
-        #endif
 #ifndef ESP32
         WiFiUDP::stopAll();
 #else
         Udp.stop();
 #endif
-        #ifdef DEBUG_SERIAL
-            DEBUG_SERIAL.printf("Update: %s\n", upload.filename.c_str());
-        #endif
         uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
         if(!Update.begin(maxSketchSpace, U_FLASH)) {
-            #ifdef DEBUG_SERIAL
-                Update.printError(DEBUG_SERIAL);
-            #endif
             success = false;
         }
     } else if(upload.status == UPLOAD_FILE_WRITE) {
         if(Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
-            #ifdef DEBUG_SERIAL
-                Update.printError(DEBUG_SERIAL);
-            #endif
             success = false;
         }
     // } else if (upload.status == UPLOAD_FILE_END) {

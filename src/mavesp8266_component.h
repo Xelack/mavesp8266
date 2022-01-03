@@ -34,6 +34,12 @@
  *
  * @author Gus Grubba <mavlink@grubba.com>
  */
+// Macro to define packed structures
+#ifdef __GNUC__
+  #define STRUCPACKED( __Declaration__ ) __Declaration__ __attribute__((packed))
+#else
+  #define STRUCPACKED( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop) )
+#endif
 
 #ifndef MAVESP8266_COMPONENT_H
 #define MAVESP8266_COMPONENT_H
@@ -42,7 +48,14 @@
 #include "PComponent.h"
 
 #define MAX_PERIPHERALS 2
+#define PERIPHERALS_QUEUE_LEN 10
 
+STRUCPACKED(
+typedef struct __peripheralsqueue {
+    MavESP8266Bridge *sender;
+    MavESP8266Component *comp;
+    mavlink_message_t Message;
+}) PeripheralsQueue_t;
 class MavESP8266Component {
 public:
     MavESP8266Component();
@@ -55,24 +68,29 @@ public:
     int  addPeripheral          (PComponent * device);
     PComponent * getPeripheral  (int index);
     PComponent * getPeripheral  (const char * name);
+    PComponent **       getPeripherals  ();
+    int                 getPeripheralsCount();
     void rebootDevice           ();
 
 private:
-    int _periph_count = 0;
-    PComponent * _Peripherals[MAX_PERIPHERALS];
-    int     _sendStatusMessage      (MavESP8266Bridge* sender, uint8_t type, const char* text);
-    void    _handleParamSet         (MavESP8266Bridge* sender, mavlink_param_set_t* param);
-    void    _handleParamRequestList (MavESP8266Bridge* sender);
-    void    _handleParamRequestRead (MavESP8266Bridge* sender, mavlink_param_request_read_t* param);
-    void    _sendParameter          (MavESP8266Bridge* sender, uint16_t index);
-    void    _sendParameter          (MavESP8266Bridge* sender, const char* id, uint32_t value, uint16_t index);
+    int                 _sendStatusMessage      (MavESP8266Bridge* sender, uint8_t type, const char* text);
+    void                _handleParamSet         (MavESP8266Bridge* sender, mavlink_param_set_t* param);
+    void                _handleParamRequestList (MavESP8266Bridge* sender);
+    void                _handleParamRequestRead (MavESP8266Bridge* sender, mavlink_param_request_read_t* param);
+    void                _sendParameter          (MavESP8266Bridge* sender, uint16_t index);
+    void                _sendParameter          (MavESP8266Bridge* sender, const char* id, uint32_t value, uint16_t index);
 
-    void    _handleCmdLong          (MavESP8266Bridge* sender, mavlink_command_long_t* cmd, uint8_t compID);
+    void                _handleCmdLong          (MavESP8266Bridge* sender, mavlink_command_long_t* cmd, uint8_t compID);
 
-    void    _wifiReboot             (MavESP8266Bridge* sender);
+    void                _wifiReboot             (MavESP8266Bridge* sender);
 
-    bool            _in_raw_mode;
-    unsigned long   _in_raw_mode_time;
+    bool                _in_raw_mode;
+    unsigned long       _in_raw_mode_time;
+
+    //TaskFunction_t      _PeripheralsTask(void* parameters);
+    int                 _periph_count = 0;
+    PComponent *        _Peripherals[MAX_PERIPHERALS];
+    PeripheralsQueue_t  _PeripheralsQueueItem;
 };
 
 #endif

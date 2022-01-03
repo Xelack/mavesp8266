@@ -39,11 +39,37 @@
 #include "mavesp8266_component.h"
 #include "mavesp8266_parameters.h"
 #include "mavesp8266_vehicle.h"
+// #include <queue.h>
 
 const char *kHASH_PARAM = "_HASH_CHECK";
+QueueHandle_t _PeripheralsQueueHandle;
+TaskHandle_t PeripheralsTaskHandle;
+
+void _PeripheralsTask(void* parameters){
+    PeripheralsQueue_t PeripheralsQueue;
+    DEBUG_LOG("Peripheral task running...\n");
+    while (1) {
+		xQueueReceive(_PeripheralsQueueHandle, (void*)&PeripheralsQueue, portMAX_DELAY);
+        for (int i = 0; i < PeripheralsQueue.comp->getPeripheralsCount(); i++)
+        {   
+            if (PeripheralsQueue.comp->getPeripherals()[i] != nullptr)
+            {
+                PeripheralsQueue.comp->getPeripherals()[i]->handleMessage(PeripheralsQueue.sender, &PeripheralsQueue.Message);
+            }
+        }
+    }
+}
 
 MavESP8266Component::MavESP8266Component()
 {
+    _PeripheralsQueueHandle = xQueueCreate(PERIPHERALS_QUEUE_LEN, sizeof(PeripheralsQueue_t));
+    xTaskCreatePinnedToCore(_PeripheralsTask,
+        "PERIPH",
+        6144,
+        NULL,
+        0,
+        &PeripheralsTaskHandle,
+        0);
 }
 int MavESP8266Component::addPeripheral(PComponent *device)
 {
@@ -58,6 +84,13 @@ PComponent *MavESP8266Component::getPeripheral(int index)
         return _Peripherals[index];
     }
     return nullptr;
+}
+PComponent **MavESP8266Component::getPeripherals()
+{
+    return _Peripherals;
+}
+int MavESP8266Component::getPeripheralsCount(){ 
+    return _periph_count;
 }
 PComponent *MavESP8266Component::getPeripheral(const char *name)
 {
@@ -92,13 +125,11 @@ bool MavESP8266Component::handleMessage(MavESP8266Bridge *sender, mavlink_messag
     //   at once from here.
     //
     //-----------------------------------------------
-    for (int i = 0; i < _periph_count; i++)
-    {
-        if (_Peripherals[i] != nullptr)
-        {
-            _Peripherals[i]->handleMessage(sender, message);
-        }
-    }
+    _PeripheralsQueueItem.comp = this;
+    _PeripheralsQueueItem.sender = sender;
+    memcpy(&_PeripheralsQueueItem.Message, message, sizeof(mavlink_message_t));
+    xQueueSend(_PeripheralsQueueHandle, (void*)&_PeripheralsQueueItem, portMAX_DELAY);
+
     //-- MAVLINK_MSG_ID_PARAM_SET
     if (message->msgid == MAVLINK_MSG_ID_PARAM_SET)
     {

@@ -195,6 +195,7 @@ void NovatekWiFiCam::_buildUrl(const char *Command, const char *Parameter)
  */
 int NovatekWiFiCam::_httpGet()
 {
+  DEBUG_LOG("Camera peripheral running on CPU Core:%d\n", xPortGetCoreID());
   if (!_idle)
   {
     // Wait a few seconds

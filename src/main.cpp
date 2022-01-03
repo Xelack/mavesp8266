@@ -96,9 +96,6 @@ MavESP8266Log Logger;
 
 NovatekWiFiCam GIT2PCam;
 CameraComponent CameraPeripheral((Camera *)&GIT2PCam);
-
-// Component.addPeripheral(&Camera);
-
 //---------------------------------------------------------------------------------
 //-- Accessors
 class MavESP8266WorldImp : public MavESP8266World
@@ -247,7 +244,6 @@ void catch_interrupts()
         DEBUG_LOG("\nAction id %u | first press: %u | last press: %u | Pulse interval: %u\n", action_req, first_press, last_press, Pt);
     }
 }
-
 //---------------------------------------------------------------------------------
 //-- Set things up
 void setup()
@@ -257,7 +253,6 @@ void setup()
     // downgrade CPU speed to reduce power consumption
     // setCpuFrequencyMhz(160);
 #endif
-    // delay(1000);
     Parameters.begin();
 #ifdef ENABLE_DEBUG
 #ifndef ESP32
