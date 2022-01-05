@@ -46,9 +46,9 @@
 #include "CameraComponent.h"
 #include "Camera.h"
 #ifdef ESP32
-#include <ESPmDNS.h>
+    #include <ESPmDNS.h>
 #else
-#include <ESP8266mDNS.h>
+    #include <ESP8266mDNS.h>
 #endif
 
 //---------------------------------------------------------------------------------
@@ -282,9 +282,12 @@ void setup()
     getWorld()->getComponent()->addPeripheral(&CameraPeripheral);
 
     WiFi.disconnect(true);
-    WiFi.mode(WIFI_MODE_APSTA);
+    #ifndef ESP32
+        WiFi.mode(WIFI_AP_STA);
+    #else
+        WiFi.mode(WIFI_MODE_APSTA);
+    #endif
     
-    tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, DNSNAME);
     WiFi.config(Parameters.getWifiStaIP(), Parameters.getWifiStaGateway(), Parameters.getWifiStaSubnet(), 0U, 0U);
     WiFi.begin(Parameters.getWifiStaSsid(), Parameters.getWifiStaPassword());
 
@@ -328,7 +331,12 @@ void setup()
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
 #endif
     //-- MDNS
-    tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_AP, DNSNAME);
+#ifndef ESP32
+    WiFi.hostname(DNSNAME);
+#else
+    WiFi.setHostname(DNSNAME);
+#endif
+
     DEBUG_LOG("Start mDNS...\n");
     if (MDNS.begin(DNSNAME))
     {

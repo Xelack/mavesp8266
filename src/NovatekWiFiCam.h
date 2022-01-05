@@ -42,7 +42,13 @@
 #include "Arduino.h"
 
 #include "Camera.h"
-#include <HTTPClient.h>
+#ifndef ESP32
+    #include <WiFiClient.h>
+    #include <esp8266httpclient.h>
+#else
+     #include <HTTPClient.h>
+#endif
+
 #include "tinyxml2.h"
  
 using namespace tinyxml2;
@@ -59,11 +65,6 @@ using namespace tinyxml2;
 #define WIFIAPP_CMD_CAPTURE    "1001"
 #define WIFIAPP_CMD_MODECHANGE "3001"
 #define WIFIAPP_CMD_RECORD     "2001"
-
-#define ok              "0"
-#define MODE_VIDEO             "1"
-#define MODE_PLAYBACK          "2"
-
 
 #define START                  "1"
 #define STOP                   "0"
@@ -96,6 +97,9 @@ private:
     String              _url;
     String              _response;
     HTTPClient          _http;
+#ifndef ESP32
+    WiFiClient          _WiFiClient;
+#endif
     CAPTURE_MODE       _Mode;
     XMLDocument       xmlDocument;     
 };

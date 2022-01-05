@@ -46,16 +46,24 @@
 
 #include "mavesp8266.h"
 #include "PComponent.h"
+#ifdef ESP32
+  #include <freertos/queue.h>
+  #include <freertos/task.h>
+#endif
 
 #define MAX_PERIPHERALS 2
-#define PERIPHERALS_QUEUE_LEN 10
 
-STRUCPACKED(
-typedef struct __peripheralsqueue {
-    MavESP8266Bridge *sender;
-    MavESP8266Component *comp;
-    mavlink_message_t Message;
-}) PeripheralsQueue_t;
+#ifdef ESP32
+  #define PERIPHERALS_QUEUE_LEN 10
+
+  STRUCPACKED(
+  typedef struct __peripheralsqueue {
+      MavESP8266Bridge *sender;
+      MavESP8266Component *comp;
+      mavlink_message_t Message;
+  }) PeripheralsQueue_t;
+#endif
+
 class MavESP8266Component {
 public:
     MavESP8266Component();
@@ -90,7 +98,9 @@ private:
     //TaskFunction_t      _PeripheralsTask(void* parameters);
     int                 _periph_count = 0;
     PComponent *        _Peripherals[MAX_PERIPHERALS];
+    #ifdef ESP32
     PeripheralsQueue_t  _PeripheralsQueueItem;
+    #endif
 };
 
 #endif

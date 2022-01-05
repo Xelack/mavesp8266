@@ -38,6 +38,10 @@
 #ifndef CAMERACOMPONENT_H
 #define CAMERACOMPONENT_H
 
+#ifndef ESP32
+    #pragma GCC diagnostic push 
+    #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+#endif
 #include <ardupilotmega/mavlink.h>
 
 #include "PComponent.h"

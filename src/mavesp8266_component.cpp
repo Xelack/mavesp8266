@@ -39,9 +39,9 @@
 #include "mavesp8266_component.h"
 #include "mavesp8266_parameters.h"
 #include "mavesp8266_vehicle.h"
-// #include <queue.h>
 
 const char *kHASH_PARAM = "_HASH_CHECK";
+#ifdef ESP32
 QueueHandle_t _PeripheralsQueueHandle;
 TaskHandle_t PeripheralsTaskHandle;
 
@@ -71,6 +71,11 @@ MavESP8266Component::MavESP8266Component()
         &PeripheralsTaskHandle,
         0);
 }
+#else
+MavESP8266Component::MavESP8266Component()
+{
+}
+#endif
 int MavESP8266Component::addPeripheral(PComponent *device)
 {
     _Peripherals[_periph_count++] = device;
@@ -125,11 +130,20 @@ bool MavESP8266Component::handleMessage(MavESP8266Bridge *sender, mavlink_messag
     //   at once from here.
     //
     //-----------------------------------------------
+#ifndef ESP32
+    for (int i = 0; i < _periph_count; i++)
+    {
+        if (_Peripherals[i] != nullptr)
+        {
+            _Peripherals[i]->handleMessage(sender, message);
+        }
+    }
+#else
     _PeripheralsQueueItem.comp = this;
     _PeripheralsQueueItem.sender = sender;
     memcpy(&_PeripheralsQueueItem.Message, message, sizeof(mavlink_message_t));
     xQueueSend(_PeripheralsQueueHandle, (void*)&_PeripheralsQueueItem, portMAX_DELAY);
-
+#endif
     //-- MAVLINK_MSG_ID_PARAM_SET
     if (message->msgid == MAVLINK_MSG_ID_PARAM_SET)
     {

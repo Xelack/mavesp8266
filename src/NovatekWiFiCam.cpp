@@ -36,7 +36,6 @@
  */
 
 #include "NovatekWiFiCam.h"
-#include "mavesp8266.h"
 
 //---------------------------------------------------------------------------------
 //-- Initialize
@@ -123,7 +122,6 @@ int NovatekWiFiCam::takePicture(char * filename)
 }
 int NovatekWiFiCam::takePicture()
 {
-  DEBUG_LOG("takePicture\n");
   _buildUrl(WIFIAPP_CMD_CAPTURE, "");
   // Send HTTP GET request
   return _httpGet();
@@ -195,7 +193,6 @@ void NovatekWiFiCam::_buildUrl(const char *Command, const char *Parameter)
  */
 int NovatekWiFiCam::_httpGet()
 {
-  DEBUG_LOG("Camera peripheral running on CPU Core:%d\n", xPortGetCoreID());
   if (!_idle)
   {
     // Wait a few seconds
@@ -208,7 +205,11 @@ int NovatekWiFiCam::_httpGet()
   }
   _idle = false;
   int httpResponseCode = -1;
-  _http.begin(_url.c_str());
+  #ifndef ESP32
+    _http.begin(_WiFiClient, _url.c_str());
+  #else
+    _http.begin(_url.c_str());
+  #endif
   httpResponseCode = _http.GET();
   _response = _http.getString();
   if (httpResponseCode > 0)
