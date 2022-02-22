@@ -112,9 +112,9 @@ MavESP8266Log::log(const char *format, ...) {
 #else
     size_t len = vsnprintf(temp, 1021, format, arg);
 #endif
-// #ifdef ENABLE_DEBUG
-//     Serial1.print(temp);
-// #endif
+#ifdef ENABLE_DEBUG
+    Serial1.print(temp);
+#endif
     if(len == 0){
         return len;
     }
