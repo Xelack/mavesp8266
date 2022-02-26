@@ -180,33 +180,6 @@ MavESP8266GCS::_readMessage()
     return bMsgReceived;
 }
 
-void
-MavESP8266GCS::readMessageRaw() {
-    int udp_count = _udp.parsePacket();
-    char buf[1024];
-    int buf_index = 0;
-
-    if(udp_count > 0)
-    {
-        while(buf_index < udp_count)
-        {
-            int result = _udp.read();
-            if (result >= 0)
-            {
-                buf[buf_index] = (char)result;
-                buf_index++;
-            }
-        }
-
-        if (buf[0] == 0x30 && buf[1] == 0x20) {
-            // reboot command, switch out of raw mode soon
-            getWorld()->getComponent()->resetRawMode();
-        }
-
-        _forwardTo->sendMessageRaw((uint8_t*)buf, buf_index);
-    }
-}
-
 //---------------------------------------------------------------------------------
 //-- Forward message(s) to the GCS
 int
@@ -244,7 +217,7 @@ MavESP8266GCS::sendMessage(mavlink_message_t* message) {
     _sendSingleUdpMessage(message);
     return 1;
 }
-
+#ifdef DEBUG_ENABLED
 int
 MavESP8266GCS::sendMessageRaw(uint8_t *buffer, int len) {
     _udp.beginPacket(_ip, _udp_port);
@@ -253,6 +226,7 @@ MavESP8266GCS::sendMessageRaw(uint8_t *buffer, int len) {
     //_udp.flush();
     return sent;
 }
+#endif
 //---------------------------------------------------------------------------------
 //-- return GCS connected status
 bool MavESP8266GCS::isConnected(){

@@ -70,8 +70,6 @@ public:
 
     //- Returns true if the component consumed the message
     bool handleMessage          (MavESP8266Bridge* sender, mavlink_message_t* message);
-    bool inRawMode              ();
-    void resetRawMode           () { _in_raw_mode_time = millis(); }
     int  sendMsgToGCS           (const char* text);
     int  addPeripheral          (PComponent * device);
     PComponent * getPeripheral  (int index);
@@ -87,14 +85,8 @@ private:
     void                _handleParamRequestRead (MavESP8266Bridge* sender, mavlink_param_request_read_t* param);
     void                _sendParameter          (MavESP8266Bridge* sender, uint16_t index);
     void                _sendParameter          (MavESP8266Bridge* sender, const char* id, uint32_t value, uint16_t index);
-
     void                _handleCmdLong          (MavESP8266Bridge* sender, mavlink_command_long_t* cmd, uint8_t compID);
-
     void                _wifiReboot             (MavESP8266Bridge* sender);
-
-    bool                _in_raw_mode;
-    unsigned long       _in_raw_mode_time;
-
     //TaskFunction_t      _PeripheralsTask(void* parameters);
     int                 _periph_count = 0;
     PComponent *        _Peripherals[MAX_PERIPHERALS];

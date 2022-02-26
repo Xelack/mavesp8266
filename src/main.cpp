@@ -368,18 +368,9 @@ void loop()
     if (!updateStatus.isUpdating())
     {
         doPendingAction();
-        if (Component.inRawMode())
-        {
-            GCS.readMessageRaw();
-            delay(0);
-            Vehicle.readMessageRaw();
-        }
-        else
-        {
-            GCS.readMessage();
-            delay(0);
-            Vehicle.readMessage();
-        }
+        GCS.readMessage();
+        delay(0);
+        Vehicle.readMessage();
     }
     updateServer.checkUpdates();
 }

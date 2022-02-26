@@ -51,10 +51,8 @@ public:
 
     void    begin           (MavESP8266Bridge* forwardTo);
     void    readMessage     ();
-    void    readMessageRaw  ();
     int     sendMessage     (mavlink_message_t* message, int count);
     int     sendMessage     (mavlink_message_t* message);
-    int     sendMessageRaw   (uint8_t *buffer, int len);
     linkStatus* getStatus   ();
 
 protected:
